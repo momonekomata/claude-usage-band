@@ -1,0 +1,11 @@
+{
+  "name": "claude-usage-band",
+  "owner": { "name": "momonekomata" },
+  "plugins": [
+    {
+      "name": "usage-band",
+      "source": "./",
+      "description": "A band above the prompt showing usage, what is left, and when each limit resets."
+    }
+  ]
+}
