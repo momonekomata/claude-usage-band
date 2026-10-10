@@ -43,6 +43,16 @@ export const toSnapshot = (
   usd: cost ? cost.usd : null,
 })
 
+export const BAR = 20
+
+export const bar = (percentUsed: number): string => {
+  const filled = Math.max(0, Math.min(BAR, Math.round((percentUsed / 100) * BAR)))
+  return '█'.repeat(filled) + '░'.repeat(BAR - filled)
+}
+
+export const tone = (percentUsed: number): 'success' | 'warning' | 'error' =>
+  percentUsed >= 85 ? 'error' : percentUsed >= 60 ? 'warning' : 'success'
+
 export const summary = (snap: Snapshot, now: number): string => {
   const parts = snap.limits.map(l => describe(l, now))
   if (snap.usd !== null) parts.push(`session $${snap.usd.toFixed(2)}`)
@@ -73,12 +83,30 @@ export const register: Register = on => {
 
     const now = await $.clock.now()
     const { Box, Text, Button } = $.ui.resolve(e)
-    const line = summary(snap, now)
+    const width = Math.max(0, ...snap.limits.map(l => (NAMES[l.kind] ?? l.kind).length))
 
     return (
-      <Box>
-        <Text dimColor>{line} </Text>
-        <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
+      <Box flexDirection="column">
+        {snap.limits.map(l => {
+          const name = (NAMES[l.kind] ?? l.kind).padEnd(width)
+          const left = Math.max(0, Math.round((100 - l.percentUsed) * 10) / 10)
+          return (
+            <Box key={l.kind}>
+              <Text bold>{name} </Text>
+              <Text color={tone(l.percentUsed)}>{bar(l.percentUsed)}</Text>
+              <Text color={tone(l.percentUsed)} bold> {l.percentUsed}% used</Text>
+              <Text dimColor> · </Text>
+              <Text color={tone(l.percentUsed)}>{left}% left</Text>
+              <Text dimColor> · {countdown(l.resetsAt, now)}</Text>
+            </Box>
+          )
+        })}
+        {snap.limits.length === 0 ? <Text dimColor>No usage limits reported yet</Text> : null}
+        <Box>
+          {snap.usd !== null ? <Text dimColor>session </Text> : null}
+          {snap.usd !== null ? <Text color="claude" bold>${snap.usd.toFixed(2)} </Text> : null}
+          <Button key="hide" label="Hide" onPress={() => update($, isHidden, () => true)} />
+        </Box>
       </Box>
     )
   })
