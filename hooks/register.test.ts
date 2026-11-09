@@ -1,5 +1,10 @@
 import { test, expect } from 'claude-code/testing'
-import { bar, countdown, describe, tone } from './register'
+import { bar, countdown, describe, toggleText, tone } from './register'
+
+test('toggleText says how to bring the band back', async () => {
+  expect(toggleText(true)).toContain('/usage-band')
+  expect(toggleText(false)).toBe('Usage band shown.')
+})
 
 test('countdown formats spans', async () => {
   const now = Date.parse('2026-10-10T00:00:00Z')

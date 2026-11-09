@@ -10,6 +10,10 @@ session $1.23  [Hide]
 
 Bars turn green, yellow (60%+) and red (85%+) as a window fills. Remaining is shown as percent left per window; the API gives no dollar balance. The same text goes to the status line.
 
+## Hide and show
+
+Press **Hide** to remove the band. Run `/usage-band` to bring it back (and to hide it again). The choice lasts for the session.
+
 ## Install
 
 ```

@@ -59,13 +59,26 @@ export const summary = (snap: Snapshot, now: number): string => {
   return parts.length > 0 ? parts.join('  ·  ') : 'No usage limits reported yet'
 }
 
+export const toggleText = (nowHidden: boolean): string =>
+  nowHidden ? 'Usage band hidden. Run /usage-band to show it again.' : 'Usage band shown.'
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
+    await $.command.register({
+      name: 'usage-band',
+      description: 'Show or hide the usage band above the prompt',
+    })
     const u = await $.session.usage()
     const snap = toSnapshot(u.rateLimits, u.cost)
     await update($, snapshot, () => snap)
     $.ui.status(summary(snap, await $.clock.now()))
     return next(e)
+  })
+
+  on('command.run', { command: 'usage-band' }, async $ => {
+    const nowHidden = !(await read($, isHidden))
+    await update($, isHidden, () => nowHidden)
+    return { text: toggleText(nowHidden) }
   })
 
   on('session.measure', async ($, e, next) => {
