@@ -161,8 +161,8 @@ const TYPING: Record<Mood, string> = {
 export const MASCOT_ALT: Record<Mood, string> = {
   cheerful: 'Claude, the cute orange pixel mascot, typing happily on a laptop',
   focused: 'Claude, the cute orange pixel mascot, typing on a laptop, focused',
-  worried: 'Claude, the cute orange pixel mascot, typing on a laptop and sweating',
-  panicking: 'Claude, the cute orange pixel mascot, teary and panicking over a smoking laptop',
+  worried: 'Claude, the cute orange pixel mascot, teary-eyed and worried at a laptop',
+  panicking: 'Claude, the cute orange pixel mascot, crying streams of tears over a smoking laptop',
 }
 
 // A short arm block on one side of the body, tapping the keys.
@@ -194,6 +194,19 @@ const blush = (): string =>
 
 const tear = (x: number): string => `<path d="M${x} 41 q2 3 0 4.5 q-2 -1.5 0 -4.5z" fill="${TEAR}"/>`
 
+// Anime crying: a stream of tears running down the face, then dripping off.
+const stream = (x: number): string =>
+  `<path d="M${x - 3} 38 C${x - 4} 44 ${x - 2} 50 ${x - 3} 54 L${x + 3} 54 C${x + 4} 50 ${x + 2} 44 ${x + 3} 38 Z" fill="${TEAR}" fill-opacity="0.92"/>` +
+  `<path d="M${x} 39 C${x - 1} 45 ${x + 1} 51 ${x} 54" fill="none" stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="1.2" stroke-dasharray="3 4">` +
+  `<animate attributeName="stroke-dashoffset" values="0;-14" dur="0.5s" repeatCount="indefinite"/>` +
+  `</path>`
+
+const drip = (x: number, begin: string): string =>
+  `<path d="M${x} 54 q2 3 0 4.5 q-2 -1.5 0 -4.5z" fill="${TEAR}">` +
+  `<animateTransform attributeName="transform" type="translate" values="0 0;0 9" dur="0.7s" begin="${begin}" repeatCount="indefinite"/>` +
+  `<animate attributeName="opacity" values="1;0" dur="0.7s" begin="${begin}" repeatCount="indefinite"/>` +
+  `</path>`
+
 const eyes = (m: Mood): string => {
   const stroke = `fill="none" stroke="${EYE}" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"`
   if (m === 'cheerful') {
@@ -203,7 +216,7 @@ const eyes = (m: Mood): string => {
       `<path d="M${EYE_R - 4} 38 L${EYE_R} 33 L${EYE_R + 4} 38" ${stroke}/>`
     )
   }
-  if (m === 'panicking') {
+  if (m === 'worried') {
     return (
       `<path d="M${EYE_L - 4} 32 L${EYE_L + 1} 36 L${EYE_L - 4} 40" ${stroke}/>` +
       `<path d="M${EYE_R + 4} 32 L${EYE_R - 1} 36 L${EYE_R + 4} 40" ${stroke}/>` +
@@ -211,18 +224,22 @@ const eyes = (m: Mood): string => {
       tear(EYE_R + 3)
     )
   }
+  if (m === 'panicking') {
+    const closed = `fill="none" stroke="${EYE}" stroke-width="2.5" stroke-linecap="round"`
+    return (
+      blush() +
+      `<path d="M${EYE_L - 5} 34 Q${EYE_L} 40 ${EYE_L + 5} 34" ${closed}/>` +
+      `<path d="M${EYE_R - 5} 34 Q${EYE_R} 40 ${EYE_R + 5} 34" ${closed}/>`
+    )
+  }
   const blink =
     `<animate attributeName="height" values="8;8;1;8" keyTimes="0;0.92;0.96;1" dur="4s" repeatCount="indefinite"/>` +
     `<animate attributeName="y" values="32;32;36;32" keyTimes="0;0.92;0.96;1" dur="4s" repeatCount="indefinite"/>`
-  const open =
+  return (
     blush() +
     `<rect x="${EYE_L - 2}" y="32" width="4" height="8" fill="${EYE}">${blink}</rect>` +
     `<rect x="${EYE_R - 2}" y="32" width="4" height="8" fill="${EYE}">${blink}</rect>`
-  if (m === 'worried') {
-    const brow = `fill="none" stroke="${EYE}" stroke-width="2" stroke-linecap="square"`
-    return open + `<path d="M${EYE_L - 6} 30 L${EYE_L + 1} 28" ${brow}/><path d="M${EYE_R + 6} 30 L${EYE_R - 1} 28" ${brow}/>`
-  }
-  return open
+  )
 }
 
 const logo = (m: Mood): string => {
@@ -271,6 +288,9 @@ export const mascot = (m: Mood): string => {
     box(27, 50, 26, 3, -6, 10, KEYS) +
     box(30, 40, 20, 10, -6, 2, LID) +
     logo(m) +
+    (m === 'panicking'
+      ? stream(EYE_L) + stream(EYE_R) + drip(EYE_L, '0s') + drip(EYE_R, '-0.35s')
+      : '') +
     `<g>${extras}</g>` +
     `</g>` +
     `</svg>`
@@ -281,8 +301,8 @@ export const mascot = (m: Mood): string => {
 export const FACE: Record<Mood, string> = {
   cheerful: '(^‿^)⌨',
   focused: '(•_•)⌨',
-  worried: '(°□°;)⌨',
-  panicking: '(>_<;)⌨',
+  worried: '(>_<;)⌨',
+  panicking: '(T_T)⌨',
 }
 
 export const summary = (snap: Snapshot, now: number): string => {

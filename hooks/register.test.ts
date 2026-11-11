@@ -68,3 +68,12 @@ test('mascot draws each mood as one svg', async () => {
   expect(mascot('panicking')).toContain('#79C0FF')
   expect(mascot('cheerful')).not.toContain('#79C0FF')
 })
+
+test('worried is teary squints, panicking is crying streams', async () => {
+  const w = mascot('worried')
+  const p = mascot('panicking')
+  expect(p).toContain('stroke-dashoffset')
+  expect(w).not.toContain('stroke-dashoffset')
+  expect(w).toContain('#BEE9FF')
+  expect(p).toContain('#BEE9FF')
+})
