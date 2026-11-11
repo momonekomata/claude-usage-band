@@ -93,39 +93,67 @@ export const pill = (percentUsed: number): string => {
   )
 }
 
-// The mascot: the little orange pixel Claude, more rattled as usage climbs.
+// The mascot: the little orange pixel Claude at a laptop, seen three-quarter, more rattled as usage climbs.
 export type Mood = 'cheerful' | 'focused' | 'worried' | 'panicking'
 
 export const mood = (percentUsed: number): Mood =>
   percentUsed >= 85 ? 'panicking' : percentUsed >= 60 ? 'worried' : percentUsed >= 30 ? 'focused' : 'cheerful'
 
-export const MASCOT_W = 72
-export const MASCOT_H = 56
+export const MASCOT_W = 84
+export const MASCOT_H = 72
 
 const ORANGE = '#D97757'
 const EYE = '#2B211C'
 const SWEAT = '#79C0FF'
 const SMOKE = '#9AA0A6'
 
-const WAVE: Record<Mood, string> = {
-  cheerful: '1.6s',
-  focused: '1.1s',
-  worried: '0.6s',
-  panicking: '0.2s',
+// Three-quarter view: an oblique projection. A point at depth z (away from us)
+// lands up and to the right, so the front, top and right faces of a box show.
+const KX = 0.8
+const KY = 0.45
+const r1 = (n: number): number => Math.round(n * 10) / 10
+
+type Shades = { front: string; side: string; top: string }
+
+const FUR: Shades = { front: ORANGE, side: '#B85F42', top: '#E8906F' }
+const LID: Shades = { front: '#8B9099', side: '#6E737B', top: '#B3B8C0' }
+const KEYS: Shades = { front: '#6E737B', side: '#565A61', top: '#B3B8C0' }
+
+const poly = (pts: [number, number][], fill: string): string =>
+  `<polygon points="${pts.map(([x, y]) => `${r1(x)},${r1(y)}`).join(' ')}" fill="${fill}" shape-rendering="geometricPrecision"/>`
+
+// A box whose front face is (x, y, w, h) at depth z0, running d deeper.
+const box = (x: number, y: number, w: number, h: number, z0: number, d: number, c: Shades): string => {
+  const fx = x + z0 * KX
+  const fy = y - z0 * KY
+  const dx = d * KX
+  const dy = d * KY
+  return (
+    poly([[fx + w, fy], [fx + w + dx, fy - dy], [fx + w + dx, fy + h - dy], [fx + w, fy + h]], c.side) +
+    poly([[fx, fy], [fx + w, fy], [fx + w + dx, fy - dy], [fx + dx, fy - dy]], c.top) +
+    `<rect x="${r1(fx)}" y="${r1(fy)}" width="${w}" height="${h}" fill="${c.front}" shape-rendering="crispEdges"/>`
+  )
+}
+
+const TYPING: Record<Mood, string> = {
+  cheerful: '0.9s',
+  focused: '0.55s',
+  worried: '0.35s',
+  panicking: '0.16s',
 }
 
 export const MASCOT_ALT: Record<Mood, string> = {
-  cheerful: 'Claude, the orange pixel mascot, looking happy',
-  focused: 'Claude, the orange pixel mascot, looking focused',
-  worried: 'Claude, the orange pixel mascot, looking worried and sweating',
-  panicking: 'Claude, the orange pixel mascot, panicking',
+  cheerful: 'Claude, the orange pixel mascot, typing happily on a laptop',
+  focused: 'Claude, the orange pixel mascot, typing on a laptop, focused',
+  worried: 'Claude, the orange pixel mascot, typing on a laptop and sweating',
+  panicking: 'Claude, the orange pixel mascot, panicking over a smoking laptop',
 }
 
-// A side nub that bobs; the pair swings out of step.
+// An arm block on one side of the body, tapping the keys.
 const arm = (x: number, begin: string, dur: string): string =>
-  `<rect x="${x}" y="22" width="6" height="8" fill="${ORANGE}">` +
-  `<animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 0" dur="${dur}" begin="${begin}" repeatCount="indefinite"/>` +
-  `</rect>`
+  `<g>${box(x, 31, 7, 8, 0, 14, FUR)}` +
+  `<animateTransform attributeName="transform" type="translate" values="0 0;0 3;0 0" dur="${dur}" begin="${begin}" repeatCount="indefinite"/>` +
+  `</g>`
 
 const drop = (x: number, begin: string, dur: string): string =>
   `<path d="M${x} 4 q3 5 0 7 q-3 -2 0 -7z" fill="${SWEAT}">` +
@@ -134,57 +162,88 @@ const drop = (x: number, begin: string, dur: string): string =>
   `</path>`
 
 const puff = (begin: string): string =>
-  `<circle cx="36" cy="10" r="2" fill="${SMOKE}" opacity="0">` +
-  `<animate attributeName="cy" values="10;0" dur="1.6s" begin="${begin}" repeatCount="indefinite"/>` +
+  `<circle cx="48" cy="12" r="2" fill="${SMOKE}" opacity="0">` +
+  `<animate attributeName="cy" values="12;0" dur="1.6s" begin="${begin}" repeatCount="indefinite"/>` +
   `<animate attributeName="r" values="2;5" dur="1.6s" begin="${begin}" repeatCount="indefinite"/>` +
   `<animate attributeName="opacity" values="0.7;0" dur="1.6s" begin="${begin}" repeatCount="indefinite"/>` +
   `</circle>`
 
-// The official mascot's eyes: two tall dark slits. Mood moves only the brows.
+const EYE_L = 30
+const EYE_R = 50
+
 const eyes = (m: Mood): string => {
-  const blink =
-    `<animate attributeName="height" values="8;8;1;8" keyTimes="0;0.92;0.96;1" dur="4s" repeatCount="indefinite"/>` +
-    `<animate attributeName="y" values="19;19;23;19" keyTimes="0;0.92;0.96;1" dur="4s" repeatCount="indefinite"/>`
-  const open =
-    `<rect x="24" y="19" width="4" height="8" fill="${EYE}">${blink}</rect>` +
-    `<rect x="44" y="19" width="4" height="8" fill="${EYE}">${blink}</rect>`
-  const brow = `fill="none" stroke="${EYE}" stroke-width="2" stroke-linecap="square"`
-  if (m === 'worried') return open + `<path d="M23 16 L29 14" ${brow}/><path d="M49 16 L43 14" ${brow}/>`
+  const stroke = `fill="none" stroke="${EYE}" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"`
+  if (m === 'cheerful') {
+    return (
+      `<path d="M${EYE_L - 4} 32 L${EYE_L} 27 L${EYE_L + 4} 32" ${stroke}/>` +
+      `<path d="M${EYE_R - 4} 32 L${EYE_R} 27 L${EYE_R + 4} 32" ${stroke}/>`
+    )
+  }
   if (m === 'panicking') {
     return (
-      `<rect x="23" y="18" width="6" height="10" fill="${EYE}"/><rect x="43" y="18" width="6" height="10" fill="${EYE}"/>` +
-      `<path d="M22 14 L29 12" ${brow}/><path d="M50 14 L43 12" ${brow}/>`
+      `<path d="M${EYE_L - 4} 26 L${EYE_L + 1} 30 L${EYE_L - 4} 34" ${stroke}/>` +
+      `<path d="M${EYE_R + 4} 26 L${EYE_R - 1} 30 L${EYE_R + 4} 34" ${stroke}/>`
     )
+  }
+  const blink =
+    `<animate attributeName="height" values="8;8;1;8" keyTimes="0;0.92;0.96;1" dur="4s" repeatCount="indefinite"/>` +
+    `<animate attributeName="y" values="26;26;30;26" keyTimes="0;0.92;0.96;1" dur="4s" repeatCount="indefinite"/>`
+  const open =
+    `<rect x="${EYE_L - 2}" y="26" width="4" height="8" fill="${EYE}">${blink}</rect>` +
+    `<rect x="${EYE_R - 2}" y="26" width="4" height="8" fill="${EYE}">${blink}</rect>`
+  if (m === 'worried') {
+    const brow = `fill="none" stroke="${EYE}" stroke-width="2" stroke-linecap="square"`
+    return open + `<path d="M${EYE_L - 6} 24 L${EYE_L + 1} 22" ${brow}/><path d="M${EYE_R + 6} 24 L${EYE_R - 1} 22" ${brow}/>`
   }
   return open
 }
 
+const logo = (m: Mood): string => {
+  const color = m === 'panicking' ? '#e5534b' : ORANGE
+  const pulse =
+    m === 'panicking'
+      ? `<animate attributeName="opacity" values="1;0.3;1" dur="0.5s" repeatCount="indefinite"/>`
+      : ''
+  return (
+    `<g stroke="${color}" stroke-width="1.3" stroke-linecap="round">${pulse}` +
+    `<path d="M35.2 44 V51.4 M31.5 47.7 H38.9 M32.6 45.1 L37.8 50.3 M37.8 45.1 L32.6 50.3"/>` +
+    `</g>`
+  )
+}
+
 export const mascot = (m: Mood): string => {
-  const dur = WAVE[m]
+  const dur = TYPING[m]
+  const half = `-${parseFloat(dur) / 2}s`
   const shake =
     m === 'panicking'
       ? `<animateTransform attributeName="transform" type="translate" values="0 0;-1 0;1 0;0 0" dur="0.18s" repeatCount="indefinite"/>`
       : ''
   const extras =
     m === 'cheerful'
-      ? `<text x="62" y="14" font-size="10" fill="${ORANGE}" font-family="sans-serif">♪<animate attributeName="opacity" values="0;1;0" dur="2.4s" repeatCount="indefinite"/></text>`
+      ? `<text x="76" y="16" font-size="10" fill="${ORANGE}" font-family="sans-serif">♪<animate attributeName="opacity" values="0;1;0" dur="2.4s" repeatCount="indefinite"/></text>`
       : m === 'worried'
-        ? drop(62, '0s', '1.6s')
+        ? drop(72, '0s', '1.6s')
         : m === 'panicking'
-          ? drop(62, '0s', '0.9s') + drop(8, '0.45s', '0.9s') + puff('0s') + puff('0.8s')
+          ? drop(72, '0s', '0.9s') + drop(12, '0.45s', '0.9s') + puff('0s') + puff('0.8s')
           : ''
+  // back row of legs first, then the body, then the front row
+  const legs = (z0: number): string =>
+    [23, 29, 45, 51].map(x => box(x, 54, 5, 12, z0, 4, FUR)).join('')
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${MASCOT_W}" height="${MASCOT_H}" viewBox="0 0 ${MASCOT_W} ${MASCOT_H}" shape-rendering="crispEdges">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${MASCOT_W}" height="${MASCOT_H}" viewBox="6 0 ${MASCOT_W} ${MASCOT_H}">` +
     `<g>${shake}` +
-    // four short legs in two pairs, a gap between
-    `<g fill="${ORANGE}"><rect x="18" y="40" width="4" height="12"/><rect x="24" y="40" width="4" height="12"/>` +
-    `<rect x="44" y="40" width="4" height="12"/><rect x="50" y="40" width="4" height="12"/></g>` +
-    // one wide block of a body
-    `<rect x="12" y="14" width="48" height="26" fill="${ORANGE}"/>` +
-    arm(6, '0s', dur) +
-    arm(60, `-${parseFloat(dur) / 2}s`, dur) +
+    `<ellipse cx="46" cy="68" rx="32" ry="3" fill="#000" fill-opacity="0.14"/>` +
+    legs(14) +
+    arm(13, half, dur) +
+    box(20, 22, 40, 32, 0, 20, FUR) +
+    arm(60, '0s', dur) +
+    legs(0) +
     eyes(m) +
-    `<g shape-rendering="geometricPrecision">${extras}</g>` +
+    // laptop in front: keyboard base running back toward Claude, lid facing us
+    box(23, 52, 34, 3, -6, 16, KEYS) +
+    box(28, 38, 24, 14, -6, 2, LID) +
+    logo(m) +
+    `<g>${extras}</g>` +
     `</g>` +
     `</svg>`
   )
